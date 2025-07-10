@@ -1,0 +1,28 @@
+name: Windows RDP with ngrok
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Setup ngrok
+      run: |
+        Invoke-WebRequest -Uri https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-windows-amd64.zip -OutFile ngrok.zip
+        Expand-Archive ngrok.zip -DestinationPath .
+
+    - name: Connect to ngrok
+      run: .\ngrok.exe authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
+
+    - name: Start RDP and ngrok
+      run: |
+        Start-Process powershell -ArgumentList "-NoExit -Command \"Set-ItemProperty -Path 'HKLM:\\System\\CurrentControlSet\\Control\\Terminal Server' -Name 'fDenyTSConnections' -Value 0; Enable-NetFirewallRule -DisplayGroup 'Remote Desktop'; net user runner P@ssw0rd123 /add; net localgroup administrators runner /add; .\\ngrok.exe tcp 3389\""
+        Start-Sleep -Seconds 36000 # Keep the RDP session alive for 10 hours (36000 seconds)
+
+    - name: Get ngrok status
+      run: .\ngrok.exe status
